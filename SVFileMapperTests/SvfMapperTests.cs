@@ -116,5 +116,20 @@ namespace SVFileMapperTests
             var attempt = SVFileParser.SplitLine(line, '|');
             Assert.Equal("Homeworker Home Address Change", attempt.Last());
         }
+
+        [Fact]
+        public void SplitString_Handles_Empty_Cell()
+        {
+            var expected = new List<string>
+            {
+                "test",
+                "",
+                "string"
+            };
+            const string line = "test,,string";
+            var result = SVFileParser.SplitLine(line, ',');
+            
+            Assert.Equal(expected, result);
+        }
     }
 }
