@@ -26,10 +26,9 @@ namespace SVFileMapper
 
             var dt = new DataTable();
 
-            dt.Columns.AddRange(
-                SplitLine(txtLines.ElementAt(0), seperator)
-                    .Select(c => new DataColumn(c)).ToArray()
-            );
+            var headers = SplitLine(txtLines.ElementAt(0), seperator);
+            
+            dt.Columns.AddRange(headers.Select(c => new DataColumn(c)).ToArray());
 
             foreach (var line in txtLines.Skip(1))
             {
@@ -80,7 +79,7 @@ namespace SVFileMapper
                 }
                 else if (line[i] == seperator && !insideString)
                 {
-                    AddToElements(line.Substring(startReadingFromIndex, i));
+                    AddToElements(line.Substring(startReadingFromIndex, i - startReadingFromIndex));
                     startReadingFromIndex = i + 1;
                 }
             }
