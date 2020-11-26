@@ -2,6 +2,11 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
+        <Title>Seperated Value File Mapper</Title>
+        <Authors>Simon Curtis</Authors>
+        <PackageProjectUrl>https://github.com/simon-curtis/SVFileMapper</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/simon-curtis/SVFileMapper</RepositoryUrl>
+        <PackageVersion>1.0.0.</PackageVersion>
     </PropertyGroup>
 
 </Project>
