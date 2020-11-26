@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -26,13 +27,13 @@ namespace SVFileMapper
 
             var dt = new DataTable();
 
-            var headers = SplitLine(txtLines.ElementAt(0), seperator);
-            
+            var headers = SplitLine(txtLines[0], seperator);
+
             dt.Columns.AddRange(headers.Select(c => new DataColumn(c)).ToArray());
 
-            foreach (var line in txtLines.Skip(1))
+            for (var i = 1; i < txtLines.Length; i++)
             {
-                var values = SplitLine(line, seperator);
+                var values = SplitLine(txtLines[i], seperator);
                 dt.Rows.Add(values);
             }
 
@@ -49,7 +50,7 @@ namespace SVFileMapper
             return part;
         }
 
-        public static IEnumerable<string> SplitLine(string line, char seperator)
+        public static string[] SplitLine(string line, char seperator)
         {
             var elements = new List<string>();
             var startReadingFromIndex = 0;
@@ -66,8 +67,10 @@ namespace SVFileMapper
                 if (i + 1 == line.Length)
                 {
                     AddToElements(line.Substring(startReadingFromIndex));
+                    break;
                 }
-                else if (line[i] == '"')
+                
+                if (line[i] == '"')
                 {
                     if (line[i + 1] == '"')
                     {
@@ -79,12 +82,16 @@ namespace SVFileMapper
                 }
                 else if (line[i] == seperator && !insideString)
                 {
-                    AddToElements(line.Substring(startReadingFromIndex, i - startReadingFromIndex));
+                    if (line[startReadingFromIndex] == seperator)
+                        elements.Add("");
+                    else
+                        AddToElements(line.Substring(startReadingFromIndex, i - startReadingFromIndex));
+                    
                     startReadingFromIndex = i + 1;
                 }
             }
 
-            return elements;
+            return elements.ToArray();
         }
     }
 }
