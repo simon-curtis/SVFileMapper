@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 using Xunit;
 using SVFileMapper;
-using System;
 
-namespace SvfMapperTests
+namespace SVFileMapperTests
 {
     public class SvfMapperTests
     {

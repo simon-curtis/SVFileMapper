@@ -22,16 +22,16 @@ namespace SVFileMapper
         /// <returns>An enumerable of parsed and failed lines</returns>
         public static async Task<ParseResults<T>> ParseFileAsync<T>(string filePath, char seperator)
         {
-            var txtLines = await File.ReadAllLinesAsync(filePath);
-            
+            var txtLines = File.ReadAllLines(filePath);
+
             var dt = new DataTable();
 
             dt.Columns.AddRange(
-                SplitLine(txtLines[0], seperator)
+                SplitLine(txtLines.ElementAt(0), seperator)
                     .Select(c => new DataColumn(c)).ToArray()
             );
 
-            foreach (var line in txtLines[1..])
+            foreach (var line in txtLines.Skip(1))
             {
                 var values = SplitLine(line, seperator);
                 dt.Rows.Add(values);
@@ -44,29 +44,29 @@ namespace SVFileMapper
 
         public static string RemoveDoubleQuotes(string part)
         {
-            if (part[0] == '"') part = part[1..];
-            if (part[^1] == '"') part = part[..^1];
+            if (part[0] == '"') part = part.Substring(1);
+            if (part.Last() == '"') part = part.Substring(0, part.Length - 1);
             part = part.Replace("\"\"", "\"");
             return part;
         }
-        
+
         public static IEnumerable<string> SplitLine(string line, char seperator)
         {
             var elements = new List<string>();
             var startReadingFromIndex = 0;
             var insideString = false;
-            
+
             void AddToElements(string subString)
             {
                 var part = RemoveDoubleQuotes(subString);
                 elements.Add(part);
             }
-            
+
             for (var i = 0; i < line.Length; i++)
             {
                 if (i + 1 == line.Length)
                 {
-                    AddToElements(line[startReadingFromIndex..]);
+                    AddToElements(line.Substring(startReadingFromIndex));
                 }
                 else if (line[i] == '"')
                 {
@@ -75,11 +75,12 @@ namespace SVFileMapper
                         i++;
                         continue;
                     }
+
                     insideString = !insideString;
                 }
                 else if (line[i] == seperator && !insideString)
                 {
-                    AddToElements(line[startReadingFromIndex..i]);
+                    AddToElements(line.Substring(startReadingFromIndex, i));
                     startReadingFromIndex = i + 1;
                 }
             }

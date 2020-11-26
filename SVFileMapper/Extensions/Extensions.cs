@@ -1,19 +1,48 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using SvfMapper.Models;
 
 namespace SVFileMapper.Extensions
 {
-    public sealed record ParseResults<T>(IEnumerable<T> Matched, IEnumerable<DataRow> UnmatchedLines);
-    public sealed record CastResult<T> (bool Success, T ParsedObject, DataRow Row);
+    public sealed class ParseResults<T>
+    {
+        public IEnumerable<T> Matched { get; }
+        public IEnumerable<DataRow> UnmatchedLines { get; }
+
+        public ParseResults(IEnumerable<T> matched, IEnumerable<DataRow> unmatchedLines)
+        {
+            Matched = matched;
+            UnmatchedLines = unmatchedLines;
+        }
+
+        public void Deconstruct(out IEnumerable<T> parsed, out IEnumerable<DataRow> failed)
+        {
+            parsed = Matched;
+            failed = UnmatchedLines;
+        }
+    }
+
+    public sealed class CastResult<T>
+    {
+        public bool Success { get; }
+        public T ParsedObject { get; }
+        public DataRow Row { get; }
+
+        public CastResult(bool success, T parsedObject, DataRow row)
+        {
+            Success = success;
+            ParsedObject = parsedObject;
+            Row = row;
+        }
+    }
 
     internal static class Extensions
     {
-        public static async Task<(IEnumerable<T> Parsed, IEnumerable<DataRow> Failed)> ParseRowsAsync<T>
+        public static async Task<ParseResults<T>> ParseRowsAsync<T>
             (this IEnumerable<DataRow> rows)
         {
             var tasks = rows
@@ -25,7 +54,7 @@ namespace SVFileMapper.Extensions
             var (matched, unmatched) = results.Match(result => result.Success);
             var parsed = matched.Select(m => m.ParsedObject);
             var failed = unmatched.Select(u => u.Row);
-            return (parsed, failed);
+            return new ParseResults<T>(parsed, failed);
         }
 
         public static Task<CastResult<T>> ParseAsync<T>(this DataRow row)
@@ -34,9 +63,9 @@ namespace SVFileMapper.Extensions
 
             try
             {
-                foreach (var property in obj!.GetType().GetProperties())
+                foreach (var property in obj.GetType().GetProperties())
                 {
-                    var customColumnName = property.GetCustomAttribute<ColumnAttribute>();
+                    var customColumnName = property.GetCustomAttribute<CsvColumn>();
                     var columnName = customColumnName?.Name ?? property.Name;
 
                     var value = row[columnName].ToString()?.Trim();
