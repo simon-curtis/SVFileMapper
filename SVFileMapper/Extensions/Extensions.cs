@@ -45,8 +45,16 @@ namespace SVFileMapper.Extensions
         public static async Task<ParseResults<T>> ParseRowsAsync<T>
             (this IEnumerable<DataRow> rows)
         {
+            var count = 0;
+            var max = rows.Count();
+            
             var tasks = rows
-                .Select(async row => await row.ParseAsync<T>())
+                .Select(async row =>
+                {
+                    count++;
+                    Console.WriteLine($"Rows processed: {count} of {max}");
+                    return await row.ParseAsync<T>();
+                })
                 .ToList();
 
             var results = await Task.WhenAll(tasks);
