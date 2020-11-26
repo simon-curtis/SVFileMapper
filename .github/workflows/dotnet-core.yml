@@ -11,23 +11,20 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: '3.1.x'
-    - name: Install dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
-    - name: Test
-      run: dotnet test --no-restore --verbosity normal
-    - name: Publish Nuget package
-      # You may pin to the exact commit or the version.
-      # uses: myci-actions/publish-nuget@8a8593efc1d99a3e048c761968beef9a08c82809
-      uses: myci-actions/publish-nuget@1
-      with:
-          # nuget package filename, wildcards allowed
-          filename: SVFileMapper
-          # API key to access the repository
-          api-key: ${{secrets.NUGET_API_KEY}}
+  steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.101
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+      - name: Test
+        run: dotnet test --no-restore --verbosity normal  
+      - name: Publish SVFileMapper
+        uses: brandedoutcast/publish-nuget@v2.5.2
+        with:
+            PROJECT_FILE_PATH: src/SVFileMapper/SVFileMapper.csproj
+            NUGET_KEY: ${{secrets.NUGET_API_KEY}}
