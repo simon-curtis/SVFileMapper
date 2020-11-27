@@ -38,15 +38,5 @@ namespace SVFileMapper.Models
         /// <b>WARNING: Logging severly slows down the code as it forces synchronous behavior</b>
         /// </summary>
         public ILogger Logger { get; set; }
-        
-
-        /// <summary>
-        /// Use this if your file has headers already. If it not, it will try and use
-        /// the property names of the object type in the ParseFile method
-        /// </summary>
-        /// <default>
-        /// True
-        /// </default>
-        public bool HasHeaders { get; set; } = true;
     }
 }

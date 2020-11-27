@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -56,11 +56,8 @@ namespace SVFileMapper
             using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
             using (var sr = new StreamReader(fs))
             {
-                var headers = _options.HasHeaders
-                    ? SplitLine(await sr.ReadLineAsync(), _seperator)
-                        .Select(c => c.ToString())
-                    : typeof(T).GetProperties()
-                        .Select(info => info.Name);
+                var headers = SplitLine(await sr.ReadLineAsync(), _seperator)
+                    .Select(c => c.ToString());
 
                 dt.Columns.AddRange(headers
                     .Select(header => new DataColumn(header))
@@ -126,9 +123,7 @@ namespace SVFileMapper
 
             foreach (var property in obj.GetType().GetProperties())
             {
-                var columnName = _options.HasHeaders 
-                    ? property.GetCustomAttribute<ColumnName>()?.Name ?? property.Name 
-                    : property.Name;
+                var columnName = property.GetCustomAttribute<ColumnName>()?.Name ?? property.Name;
 
                 var value = row[columnName].ToString()?.Trim();
                 if (value == null) continue;
