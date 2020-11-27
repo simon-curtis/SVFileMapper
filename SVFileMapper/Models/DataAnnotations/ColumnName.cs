@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SvfMapper.Models
+namespace SVFileMapper.Models.DataAnnotations
 {
     [AttributeUsage(
          AttributeTargets.Class |
@@ -9,11 +9,11 @@ namespace SvfMapper.Models
          AttributeTargets.Method |
          AttributeTargets.Property,
          AllowMultiple = true)]
-    public class CsvColumn : Attribute
+    public class ColumnName : Attribute
     {
         public string Name { get; }
 
-        public CsvColumn(string name)
+        public ColumnName(string name)
         {
             Name = name;
         }
