@@ -3,6 +3,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Reflection;
 using SVFileMapper.Extensions;
 using System.Collections.Generic;
 
@@ -92,6 +93,67 @@ namespace SVFileMapper
             }
 
             return elements.ToArray();
+        }
+        
+        public static async Task<ParseResults<T>> ParseRowsAsync<T>
+            (this IEnumerable<DataRow> rows)
+        {
+            var count = 0;
+            var max = rows.Count();
+            
+            var tasks = rows
+                .Select(async row =>
+                {
+                    count++;
+                    Console.WriteLine($"Rows processed: {count} of {max}");
+                    return await row.ParseAsync<T>();
+                })
+                .ToList();
+
+            var results = await Task.WhenAll(tasks);
+
+            var (matched, unmatched) = results.Match(result => result.Success);
+            var parsed = matched.Select(m => m.ParsedObject);
+            var failed = unmatched.Select(u => u.Row);
+            return new ParseResults<T>(parsed, failed);
+        }
+
+        public static Task<CastResult<T>> ParseAsync<T>(this DataRow row)
+        {
+            var obj = Activator.CreateInstance<T>();
+
+            try
+            {
+                foreach (var property in obj.GetType().GetProperties())
+                {
+                    var customColumnName = property.GetCustomAttribute<CsvColumn>();
+                    var columnName = customColumnName?.Name ?? property.Name;
+
+                    var value = row[columnName].ToString()?.Trim();
+                    if (value == null) continue;
+
+                    if (property.PropertyType == typeof(bool))
+                    {
+                        property.SetValue(obj, value == "Yes");
+                    }
+                    else if (property.PropertyType == typeof(DateTime)
+                             || property.PropertyType == typeof(DateTime?))
+                    {
+                        if (DateTime.TryParse(value, out var parsedDate)) property.SetValue(obj, parsedDate);
+                    }
+                    else
+                    {
+                        property.SetValue(obj, value);
+                    }
+                }
+
+                return Task.FromResult(new CastResult<T>(true, obj, row));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return Task.FromResult(new CastResult<T>(false, obj, row));
+            }
         }
     }
 }
