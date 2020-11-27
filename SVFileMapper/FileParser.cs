@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -69,7 +69,7 @@ namespace SVFileMapper
                 string line;
                 while ((line = await sr.ReadLineAsync()) != null)
                 {
-                    var values = SplitLine(line, _seperator);
+                    var values = SplitLine(line, _seperator).ToArray();
                     dt.Rows.Add(values);
                 }
             }
