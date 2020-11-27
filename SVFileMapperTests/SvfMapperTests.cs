@@ -8,10 +8,48 @@ namespace SVFileMapperTests
     public class SvfMapperTests
     {
         [Fact]
-        public void RemoveDoubleQuotes_Properly_Escapes_String()
+        public void SplitString_Comma_Seperation_Test()
         {
-            var result = SVFileParser.RemoveDoubleQuotes("\"this is a \"\" test\"");
-            Assert.Equal("this is a \" test", result);
+            var expected = new List<string>
+            {
+                "test",
+                "string"
+            };
+            
+            const string line = "test,string";
+            var result = FileParser.SplitLine(line, ',');
+            
+            Assert.Equal(expected, result);
+        }
+        
+        [Fact]
+        public void SplitString_Pipe_Seperation_Test()
+        {
+            var expected = new List<string>
+            {
+                "test",
+                "string"
+            };
+            
+            const string line = "test|string";
+            var result = FileParser.SplitLine(line, '|');
+            
+            Assert.Equal(expected, result);
+        }
+        
+        [Fact]
+        public void SplitString_Tab_Seperation_Test()
+        {
+            var expected = new List<string>
+            {
+                "test",
+                "string"
+            };
+            
+            const string line = "test	string";
+            var result = FileParser.SplitLine(line, '\t');
+            
+            Assert.Equal(expected, result);
         }
 
         [Fact]
@@ -23,7 +61,7 @@ namespace SVFileMapperTests
             };
 
             const string testString = "a simple test to test line splitting";
-            var result = SVFileParser.SplitLine(testString, ',');
+            var result = FileParser.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -37,7 +75,7 @@ namespace SVFileMapperTests
             };
 
             const string testString = "a simple test,to test line splitting";
-            var result = SVFileParser.SplitLine(testString, ',');
+            var result = FileParser.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -51,7 +89,7 @@ namespace SVFileMapperTests
             };
 
             const string testString = "\"a simple test\",to test line splitting";
-            var result = SVFileParser.SplitLine(testString, ',');
+            var result = FileParser.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -67,7 +105,7 @@ namespace SVFileMapperTests
             };
 
             var testString = $"a simple test,\"to test line {seperator} splitting\"";
-            var result = SVFileParser.SplitLine(testString, ',');
+            var result = FileParser.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -81,7 +119,7 @@ namespace SVFileMapperTests
             };
 
             const string testString = "a simple test,\"to test line\"\" splitting\"";
-            var result = SVFileParser.SplitLine(testString, ',');
+            var result = FileParser.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -95,7 +133,7 @@ namespace SVFileMapperTests
             };
 
             const string testString = "a simple test,\"to test line\" splitting\"";
-            var result = SVFileParser.SplitLine(testString, ',');
+            var result = FileParser.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -113,7 +151,7 @@ namespace SVFileMapperTests
                 "Is employee eligible for DSE|AS Site Manager|AS Regional Manager|AS Apprentice|NI Number|Home Postcode|" +
                 "ARC Site Inspection Author|Is Homeworker|Homeworker Home Address Change";
 
-            var attempt = SVFileParser.SplitLine(line, '|');
+            var attempt = FileParser.SplitLine(line, '|');
             Assert.Equal("Homeworker Home Address Change", attempt.Last());
         }
 
@@ -127,7 +165,7 @@ namespace SVFileMapperTests
                 "string"
             };
             const string line = "test,,string";
-            var result = SVFileParser.SplitLine(line, ',');
+            var result = FileParser.SplitLine(line, ',');
             
             Assert.Equal(expected, result);
         }
