@@ -5,7 +5,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using SVFileMapper.Extensions;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Net;
 using System.Reflection;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using SVFileMapper.Models;
 using SVFileMapper.Models.DataAnnotations;
@@ -17,6 +20,8 @@ namespace SVFileMapper
         private readonly char _seperator;
         private readonly ParserOptions _options;
         private readonly ILogger _logger;
+
+        private ICollection<(string name, PropertyInfo property)> Properties { get; set; }
 
         public FileParser(Action<ParserOptions> options)
         {
@@ -41,42 +46,51 @@ namespace SVFileMapper
                         _options.SeperatingCharacter, null);
             }
         }
-        
+
         public async Task<ParseResults<T>> ParseFileAsync<T>
-            (string filePath,  IProgress<ParserProgress> progress = null)
+            (string filePath, IProgress<ParserProgress> progress = null)
         {
             if (progress != null)
             {
                 _logger?.LogCritical("WARNING: You've set a Progress indicator on this class, this will severly slow " +
-                                    "down the code as it forces synchronous behavior");
+                                     "down the code as it forces synchronous behavior");
             }
-            
+
+            Properties = typeof(T).GetProperties()
+                .Where(p => p.GetCustomAttribute<ColumnIgnored>() == null)
+                .Select(p => (p.GetCustomAttribute<ColumnName>()?.Name ?? p.Name, p))
+                .ToList();
+
             var dt = new DataTable();
 
-            using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-            using (var sr = new StreamReader(fs))
-            {
-                var headers = SplitLine(await sr.ReadLineAsync(), _seperator)
-                    .Select(c => c.ToString());
+            var sw = new Stopwatch();
+            sw.Start();
 
-                dt.Columns.AddRange(headers
+            var lines = File.ReadAllLines(filePath);
+            if (lines.Length < 2)
+            {
+                _logger.LogCritical("No rows in file");
+                return new ParseResults<T>(new T[0], new DataRow[0]);
+            }
+
+            dt.Columns.AddRange(
+                SplitLine(lines[0], _seperator)
                     .Select(header => new DataColumn(header))
                     .ToArray());
 
-                string line;
-                while ((line = await sr.ReadLineAsync()) != null)
-                {
-                    var values = SplitLine(line, _seperator).ToArray();
-                    dt.Rows.Add(values);
-                }
-            }
+
+            dt.Rows.Add(
+                (await Task.WhenAll(lines.Skip(1).Select(ExtractLineAsync))).ToArray<object>());
+
+            sw.Stop();
+            Console.WriteLine(sw.ElapsedMilliseconds);
 
             if (dt.Rows.Count == 0)
             {
                 _logger.LogCritical("No rows in file");
                 return new ParseResults<T>(new T[0], new DataRow[0]);
             }
-            
+
             var (rowsParsed, rowsFailed) = await ParseRowsAsync<T>(dt.Rows.Cast<DataRow>(), progress);
             var parsed = rowsParsed;
             var failed = rowsFailed;
@@ -84,13 +98,18 @@ namespace SVFileMapper
             return new ParseResults<T>(parsed, failed);
         }
 
+        private Task<IEnumerable<string>> ExtractLineAsync(string line)
+        {
+            return Task.Run(() => SplitLine(line, _seperator));
+        }
+
         private async Task<ParseResults<T>> ParseRowsAsync<T>
-            (IEnumerable<DataRow> rows,  IProgress<ParserProgress> progress = null)
+            (IEnumerable<DataRow> rows, IProgress<ParserProgress> progress = null)
         {
             var count = 0;
             var dataRows = rows as DataRow[] ?? rows.ToArray();
             var max = dataRows.Length;
-            
+
             var tasks = dataRows
                 .Select(async row =>
                 {
@@ -108,7 +127,7 @@ namespace SVFileMapper
                     }
                 })
                 .ToList();
-            
+
             var results = await Task.WhenAll(tasks);
 
             var (matched, unmatched) = results.Match(result => result.Success);
@@ -121,11 +140,12 @@ namespace SVFileMapper
         {
             var obj = Activator.CreateInstance<T>();
 
-            foreach (var property in obj.GetType().GetProperties())
+            foreach (var (name, property) in Properties)
             {
-                var columnName = property.GetCustomAttribute<ColumnName>()?.Name ?? property.Name;
+                if (!row.Table.Columns.Contains(name))
+                    continue;
 
-                var value = row[columnName].ToString()?.Trim();
+                var value = row[name].ToString()?.Trim();
                 if (value == null) continue;
 
                 if (property.PropertyType == typeof(int))
@@ -161,14 +181,16 @@ namespace SVFileMapper
 
         public static IEnumerable<string> SplitLine(string line, char seperator)
         {
-            var elements = new List<string>();
+            var possibleIndexes = line.Split(seperator).Length;
+            var elements = new string[possibleIndexes];
+            var lastSetIndex = 0;
             var startReadingFromIndex = 0;
             var insideString = false;
 
             void AddToElements(string subString)
             {
-                var part = RemoveDoubleQuotes(subString);
-                elements.Add(part);
+                elements[lastSetIndex] = RemoveDoubleQuotes(subString);
+                lastSetIndex++;
             }
 
             for (var i = 0; i < line.Length; i++)
@@ -191,20 +213,21 @@ namespace SVFileMapper
                 }
                 else if (line[i] == seperator && !insideString)
                 {
-                    if (line[startReadingFromIndex] == seperator)
-                        elements.Add("");
-                    else
-                        AddToElements(line.Substring(startReadingFromIndex, i - startReadingFromIndex));
+                    AddToElements(
+                        line[startReadingFromIndex] == seperator
+                            ? ""
+                            : line.Substring(startReadingFromIndex, i - startReadingFromIndex));
 
                     startReadingFromIndex = i + 1;
                 }
             }
 
-            return elements.ToArray();
+            return elements.Where(e => e != null).ToArray();
         }
 
         private static string RemoveDoubleQuotes(string part)
         {
+            if (part == "") return part;
             if (part[0] == '"') part = part.Substring(1);
             if (part.Last() == '"') part = part.Substring(0, part.Length - 1);
             part = part.Replace("\"\"", "\"");
