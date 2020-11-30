@@ -62,10 +62,7 @@ namespace SVFileMapper
                 .ToList();
 
             var dt = new DataTable();
-
-            var sw = new Stopwatch();
-            sw.Start();
-
+            
             var lines = File.ReadAllLines(filePath);
             if (lines.Length < 2)
             {
@@ -77,13 +74,9 @@ namespace SVFileMapper
                 SplitLine(lines[0], _seperator)
                     .Select(header => new DataColumn(header))
                     .ToArray());
-
-
+            
             dt.Rows.Add(
                 (await Task.WhenAll(lines.Skip(1).Select(ExtractLineAsync))).ToArray<object>());
-
-            sw.Stop();
-            Console.WriteLine(sw.ElapsedMilliseconds);
 
             if (dt.Rows.Count == 0)
             {
