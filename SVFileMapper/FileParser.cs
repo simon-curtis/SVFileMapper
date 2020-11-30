@@ -62,7 +62,7 @@ namespace SVFileMapper
                 .ToList();
 
             var dt = new DataTable();
-            
+
             var lines = File.ReadAllLines(filePath);
             if (lines.Length < 2)
             {
@@ -74,15 +74,17 @@ namespace SVFileMapper
                 SplitLine(lines[0], _seperator)
                     .Select(header => new DataColumn(header))
                     .ToArray());
-            
-            dt.Rows.Add(
-                (await Task.WhenAll(lines.Skip(1).Select(ExtractLineAsync))).ToArray<object>());
 
-            if (dt.Rows.Count == 0)
+            var convertedRows = await Task.WhenAll(lines.Skip(1).Select(ExtractObjectsAsync));
+
+            if (convertedRows.Length == 0)
             {
-                _logger.LogCritical("No rows in file");
+                _logger.LogCritical("No rows converted");
                 return new ParseResults<T>(new T[0], new DataRow[0]);
             }
+
+            foreach (var row in convertedRows)
+                dt.Rows.Add(row);
 
             var (rowsParsed, rowsFailed) = await ParseRowsAsync<T>(dt.Rows.Cast<DataRow>(), progress);
             var parsed = rowsParsed;
@@ -91,10 +93,8 @@ namespace SVFileMapper
             return new ParseResults<T>(parsed, failed);
         }
 
-        private Task<IEnumerable<string>> ExtractLineAsync(string line)
-        {
-            return Task.Run(() => SplitLine(line, _seperator));
-        }
+        private Task<object[]> ExtractObjectsAsync(string line)
+            => Task.Run(() => SplitLine(line, _seperator).ToArray<object>());
 
         private async Task<ParseResults<T>> ParseRowsAsync<T>
             (IEnumerable<DataRow> rows, IProgress<ParserProgress> progress = null)
