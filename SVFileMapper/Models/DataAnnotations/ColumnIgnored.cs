@@ -6,13 +6,7 @@ namespace SVFileMapper.Models.DataAnnotations
         AttributeTargets.Field |
         AttributeTargets.Property,
         AllowMultiple = true)]
-    public class ColumnName : Attribute
+    public class ColumnIgnored : Attribute
     {
-        public string Name { get; }
-
-        public ColumnName(string name)
-        {
-            Name = name;
-        }
     }
 }
