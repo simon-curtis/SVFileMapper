@@ -67,7 +67,7 @@ namespace SVFileMapper
             if (lines.Length < 2)
             {
                 _logger.LogCritical("No rows in file");
-                return new ParseResults<T>(new T[0], new DataRow[0]);
+                return new ParseResults<T>(Array.Empty<T>(), new DataRow[0]);
             }
 
             dt.Columns.AddRange(
@@ -80,7 +80,7 @@ namespace SVFileMapper
             if (convertedRows.Length == 0)
             {
                 _logger.LogCritical("No rows converted");
-                return new ParseResults<T>(new T[0], new DataRow[0]);
+                return new ParseResults<T>(Array.Empty<T>(), new DataRow[0]);
             }
 
             foreach (var row in convertedRows)
