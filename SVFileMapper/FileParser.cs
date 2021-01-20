@@ -166,6 +166,12 @@ namespace SVFileMapper
                     continue;
                 }
 
+                if (property.PropertyType == typeof(string))
+                {
+                    property.SetValue(obj, value.Trim());
+                    continue;
+                }
+                
                 property.SetValue(obj, value);
             }
 
