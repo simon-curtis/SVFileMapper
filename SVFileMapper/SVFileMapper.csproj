@@ -8,6 +8,7 @@
         <RepositoryUrl>https://github.com/simon-curtis/SVFileMapper</RepositoryUrl>
         <PackageVersion>2.0.1</PackageVersion>
         <LangVersion>latestmajor</LangVersion>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>

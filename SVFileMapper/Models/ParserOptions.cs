@@ -18,7 +18,7 @@ namespace SVFileMapper.Models
         /// Separator.Comma
         /// </default>
         public Separator SeperatingCharacter { get; set; }
-        
+
         /// <summary>
         /// If the target type of the property is boolean, it will check this to check
         /// the value's truthiness.<br/>
@@ -31,12 +31,12 @@ namespace SVFileMapper.Models
         ///     { "No",  false }<br/>
         /// }
         /// </code>
-        public Dictionary<string, bool> AdditionalBooleanValues { get; set; }
+        public Dictionary<string, bool> AdditionalBooleanValues { get; set; } = new();
 
         /// <summary>
         /// Use this to attach a logger to output any commentry from the parsing process.<br/>
         /// <b>WARNING: Logging severly slows down the code as it forces synchronous behavior</b>
         /// </summary>
-        public ILogger Logger { get; set; }
+        public ILogger? Logger { get; set; }
     }
 }

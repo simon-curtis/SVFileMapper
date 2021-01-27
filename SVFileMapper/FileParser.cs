@@ -25,6 +25,8 @@ namespace SVFileMapper
 
         public FileParser(Action<ParserOptions> options)
         {
+            Properties = new List<(string name, PropertyInfo property)>();
+            
             _options = new ParserOptions();
             options.Invoke(_options);
 
@@ -48,13 +50,10 @@ namespace SVFileMapper
         }
 
         public async Task<ParseResults<T>> ParseFileAsync
-            (string filePath, IProgress<ParserProgress> progress = null)
+            (string filePath, IProgress<ParserProgress>? progress = null)
         {
-            if (progress != null)
-            {
-                _logger?.LogCritical("WARNING: You've set a Progress indicator on this class, this will severly slow " +
-                                     "down the code as it forces synchronous behavior");
-            }
+            _logger?.LogCritical("WARNING: You've set a Progress indicator on this class, this will severly slow " +
+                                 "down the code as it forces synchronous behavior");
 
             Properties = typeof(T).GetProperties()
                 .Where(p => p.GetCustomAttribute<ColumnIgnored>() == null)
@@ -67,7 +66,7 @@ namespace SVFileMapper
             if (lines.Length < 2)
             {
                 _logger.LogCritical("No rows in file");
-                return new ParseResults<T>(Array.Empty<T>(), new DataRow[0]);
+                return new ParseResults<T>(Array.Empty<T>(), Array.Empty<UnmatchedResult>());
             }
 
             dt.Columns.AddRange(
@@ -80,7 +79,7 @@ namespace SVFileMapper
             if (convertedRows.Length == 0)
             {
                 _logger.LogCritical("No rows converted");
-                return new ParseResults<T>(Array.Empty<T>(), new DataRow[0]);
+                return new ParseResults<T>(Array.Empty<T>(), Array.Empty<UnmatchedResult>());
             }
 
             foreach (var row in convertedRows)
@@ -97,85 +96,109 @@ namespace SVFileMapper
             => Task.Run(() => SplitLine(line, _seperator).ToArray<object>());
 
         private async Task<ParseResults<T>> ParseRowsAsync
-            (IEnumerable<DataRow> rows, IProgress<ParserProgress> progress = null)
+            (IEnumerable<DataRow> rows, IProgress<ParserProgress>? progress = null)
         {
             var count = 0;
             var dataRows = rows as DataRow[] ?? rows.ToArray();
             var max = dataRows.Length;
 
-            var tasks = dataRows
-                .Select(async row =>
+            Task<CastResult<T>> ParseRowTask(DataRow row)
+            {
+                progress?.Report(new ParserProgress(++count, max));
+                
+                CastResult<T> result;
+                try
                 {
-                    progress?.Report(new ParserProgress(++count, max));
+                    (T parsedObject, var failedColumns) = ParseRow(row);
+                    var columnConversions = failedColumns.ToList();
+                    
+                    result = columnConversions.Any()
+                        ? new CastResult<T>(false, parsedObject, row, columnConversions)
+                        : new CastResult<T>(true, parsedObject, row);
+                }
+                catch (Exception ex)
+                {
+                    result = new CastResult<T>(false, Activator.CreateInstance<T>(), row,
+                        Array.Empty<FailedColumnConversion>(), ex.Message);
+                }
+                
+                return Task.FromResult(result);
+            }
 
-                    try
-                    {
-                        return new CastResult<T>(true, await ParseRowAsync(row), row);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError($"Error Casting => {ex.Message}");
-                        var obj = Activator.CreateInstance<T>();
-                        return new CastResult<T>(false, obj, row);
-                    }
-                })
-                .ToList();
+            var tasks = dataRows.Select(ParseRowTask).ToList();
 
             var results = await Task.WhenAll(tasks);
 
-            var (matched, unmatched) = results.Match(result => result.Success);
+            var (matched, unmatched) = results.Partition(result => result.Success);
             var parsed = matched.Select(m => m.ParsedObject);
-            var failed = unmatched.Select(u => u.Row);
+            var failed = unmatched.Select(u => new UnmatchedResult
+            {
+                Row = u.Row,
+                FailedColumnConversions = u.FailedColumnConversions
+            });
             return new ParseResults<T>(parsed, failed);
         }
 
-        private Task<T> ParseRowAsync(DataRow row)
+        private (T parsedObject, IEnumerable<FailedColumnConversion> failedColumnConversions) ParseRow(DataRow row)
         {
             var obj = Activator.CreateInstance<T>();
-
+            var failures = new List<FailedColumnConversion>();
+            
             foreach (var (name, property) in Properties)
             {
-                if (!row.Table.Columns.Contains(name))
-                    continue;
-
-                var value = row[name].ToString()?.Trim();
-                if (value == null) continue;
-
-                if (property.PropertyType == typeof(int))
+                try
                 {
-                    if (int.TryParse(value, out var result))
-                        property.SetValue(obj, result);
-                    continue;
-                }
+                    if (!row.Table.Columns.Contains(name))
+                        continue;
 
-                if (property.PropertyType == typeof(bool))
-                {
-                    if (bool.TryParse(value, out var result))
-                        property.SetValue(obj, result);
+                    var value = row[name].ToString()?.Trim();
+                    if (value == null) continue;
 
-                    if (_options.AdditionalBooleanValues.Keys.Contains(value))
-                        property.SetValue(obj, _options.AdditionalBooleanValues[value]);
-                    continue;
-                }
+                    if (property.PropertyType == typeof(int))
+                    {
+                        if (int.TryParse(value, out var result))
+                            property.SetValue(obj, result);
+                        continue;
+                    }
 
-                if (property.PropertyType == typeof(DateTime)
-                    || property.PropertyType == typeof(DateTime?))
-                {
-                    if (DateTime.TryParse(value, out var parsedDate))
-                        property.SetValue(obj, parsedDate);
-                    continue;
-                }
+                    if (property.PropertyType == typeof(bool))
+                    {
+                        if (bool.TryParse(value, out var result))
+                            property.SetValue(obj, result);
 
-                if (property.PropertyType == typeof(string))
-                {
-                    property.SetValue(obj, value.Trim());
-                    continue;
-                }
+                        if (_options.AdditionalBooleanValues.Keys.Contains(value))
+                            property.SetValue(obj, _options.AdditionalBooleanValues[value]);
+                        continue;
+                    }
+
+                    if (property.PropertyType == typeof(DateTime)
+                        || property.PropertyType == typeof(DateTime?))
+                    {
+                        if (DateTime.TryParse(value, out var parsedDate))
+                            property.SetValue(obj, parsedDate);
+                        continue;
+                    }
+
+                    if (property.PropertyType == typeof(string))
+                    {
+                        property.SetValue(obj, value.Trim());
+                        continue;
+                    }
+                    
+                    property.SetValue(obj, value);
                 
-                property.SetValue(obj, value);
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(new FailedColumnConversion
+                    {
+                        Column = row.Table.Columns[name],
+                        Reason = ex.Message
+                    });
+                }
             }
 
-            return Task.FromResult(obj);
+            return (obj, failures);
         }
 
         public static IEnumerable<string> SplitLine(string line, char seperator)
