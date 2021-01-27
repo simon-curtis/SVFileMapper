@@ -5,7 +5,7 @@ using SVFileMapper.Models;
 
 namespace SVFileMapper
 {
-    public interface IFileParser
+    public interface IFileParser<T>
     {
         /// <summary>
         /// Reads through each line of a seperated value file (such as) provided in the class constructor and converts them to
@@ -18,7 +18,7 @@ namespace SVFileMapper
         /// <param name="progress">Use this if you need to </param>
         /// <typeparam name="T">The type of object you want to cast each line to.</typeparam>
         /// <returns>An enumerable of parsed and failed lines</returns>
-        Task<ParseResults<T>> ParseFileAsync<T>
+        Task<ParseResults<T>> ParseFileAsync
             (string filePath, IProgress<ParserProgress> progress = null);
     }
 }

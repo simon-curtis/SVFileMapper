@@ -15,7 +15,7 @@ using SVFileMapper.Models.DataAnnotations;
 
 namespace SVFileMapper
 {
-    public class FileParser : IFileParser
+    public class FileParser<T> : IFileParser<T>
     {
         private readonly char _seperator;
         private readonly ParserOptions _options;
@@ -47,7 +47,7 @@ namespace SVFileMapper
             }
         }
 
-        public async Task<ParseResults<T>> ParseFileAsync<T>
+        public async Task<ParseResults<T>> ParseFileAsync
             (string filePath, IProgress<ParserProgress> progress = null)
         {
             if (progress != null)
@@ -86,7 +86,7 @@ namespace SVFileMapper
             foreach (var row in convertedRows)
                 dt.Rows.Add(row);
 
-            var (rowsParsed, rowsFailed) = await ParseRowsAsync<T>(dt.Rows.Cast<DataRow>(), progress);
+            var (rowsParsed, rowsFailed) = await ParseRowsAsync(dt.Rows.Cast<DataRow>(), progress);
             var parsed = rowsParsed;
             var failed = rowsFailed;
 
@@ -96,7 +96,7 @@ namespace SVFileMapper
         private Task<object[]> ExtractObjectsAsync(string line)
             => Task.Run(() => SplitLine(line, _seperator).ToArray<object>());
 
-        private async Task<ParseResults<T>> ParseRowsAsync<T>
+        private async Task<ParseResults<T>> ParseRowsAsync
             (IEnumerable<DataRow> rows, IProgress<ParserProgress> progress = null)
         {
             var count = 0;
@@ -110,11 +110,11 @@ namespace SVFileMapper
 
                     try
                     {
-                        return new CastResult<T>(true, await ParseRowAsync<T>(row), row);
+                        return new CastResult<T>(true, await ParseRowAsync(row), row);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex.Message);
+                        _logger.LogError($"Error Casting => {ex.Message}");
                         var obj = Activator.CreateInstance<T>();
                         return new CastResult<T>(false, obj, row);
                     }
@@ -129,7 +129,7 @@ namespace SVFileMapper
             return new ParseResults<T>(parsed, failed);
         }
 
-        private Task<T> ParseRowAsync<T>(DataRow row)
+        private Task<T> ParseRowAsync(DataRow row)
         {
             var obj = Activator.CreateInstance<T>();
 
