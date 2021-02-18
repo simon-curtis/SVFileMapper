@@ -8,11 +8,11 @@ namespace SVFileMapper.Models.DataAnnotations
         AllowMultiple = true)]
     public class ColumnName : Attribute
     {
-        public string Name { get; }
-
         public ColumnName(string name)
         {
             Name = name;
         }
+
+        public string Name { get; }
     }
 }

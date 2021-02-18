@@ -7,10 +7,10 @@ namespace SVFileMapper.Extensions
 {
     public class FailedColumnConversion
     {
-        public DataColumn? Column {get;set;}
+        public DataColumn? Column { get; set; }
         public string? Reason { get; set; } = "";
     }
-    
+
     public class UnmatchedResult
     {
         public DataRow? Row { get; set; }
@@ -21,14 +21,14 @@ namespace SVFileMapper.Extensions
 
     public sealed class ParseResults<T>
     {
-        public IEnumerable<T> Matched { get; }
-        public IEnumerable<UnmatchedResult> UnmatchedLines { get; }
-
         public ParseResults(IEnumerable<T> matched, IEnumerable<UnmatchedResult> unmatchedLines)
         {
             Matched = matched;
             UnmatchedLines = unmatchedLines;
         }
+
+        public IEnumerable<T> Matched { get; }
+        public IEnumerable<UnmatchedResult> UnmatchedLines { get; }
 
         public void Deconstruct(out IEnumerable<T> parsed, out IEnumerable<UnmatchedResult> failed)
         {
@@ -39,14 +39,8 @@ namespace SVFileMapper.Extensions
 
     public sealed class CastResult<T>
     {
-        public bool Success { get; }
-        public T ParsedObject { get; }
-        public DataRow Row { get; }
-        public IEnumerable<FailedColumnConversion> FailedColumnConversions { get; }
-        public string FailureReason { get; }
-
         public CastResult(bool success, T parsedObject, DataRow row,
-            IEnumerable<FailedColumnConversion>? failedColumnConversions = null, 
+            IEnumerable<FailedColumnConversion>? failedColumnConversions = null,
             string failureReason = "")
         {
             Success = success;
@@ -55,6 +49,12 @@ namespace SVFileMapper.Extensions
             FailedColumnConversions = failedColumnConversions ?? Array.Empty<FailedColumnConversion>();
             FailureReason = failureReason;
         }
+
+        public bool Success { get; }
+        public T ParsedObject { get; }
+        public DataRow Row { get; }
+        public IEnumerable<FailedColumnConversion> FailedColumnConversions { get; }
+        public string FailureReason { get; }
     }
 
     internal static class Extensions

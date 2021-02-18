@@ -1,15 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
-using SVFileMapper.Extensions;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Net;
 using System.Reflection;
-using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using SVFileMapper.Extensions;
 using SVFileMapper.Models;
 using SVFileMapper.Models.DataAnnotations;
 
@@ -17,16 +14,19 @@ namespace SVFileMapper
 {
     public class FileParser<T> : IFileParser<T>
     {
-        private readonly char _seperator;
-        private readonly ParserOptions _options;
         private readonly ILogger _logger;
+        private readonly ParserOptions _options;
+        private readonly char _seperator;
 
-        private ICollection<(string name, PropertyInfo property)> Properties { get; set; }
+        public FileParser()
+        {
+            _seperator = ',';
+            _options = new ParserOptions();
+            _logger = new FakeLogger();
+        }
 
         public FileParser(Action<ParserOptions> options)
         {
-            Properties = new List<(string name, PropertyInfo property)>();
-            
             _options = new ParserOptions();
             options.Invoke(_options);
 
@@ -49,6 +49,9 @@ namespace SVFileMapper
             }
         }
 
+        private ICollection<(string name, PropertyInfo property)> Properties { get; set; }
+            = new List<(string name, PropertyInfo property)>();
+
         public async Task<ParseResults<T>> ParseFileAsync
             (string filePath, IProgress<ParserProgress>? progress = null)
         {
@@ -60,7 +63,7 @@ namespace SVFileMapper
                 .Select(p => (p.GetCustomAttribute<ColumnName>()?.Name ?? p.Name, p))
                 .ToList();
 
-            var dt = new DataTable();
+            DataTable? dt = new DataTable();
 
             var lines = File.ReadAllLines(filePath);
             if (lines.Length < 2)
@@ -93,7 +96,9 @@ namespace SVFileMapper
         }
 
         private Task<object[]> ExtractObjectsAsync(string line)
-            => Task.Run(() => SplitLine(line, _seperator).ToArray<object>());
+        {
+            return Task.Run(() => SplitLine(line, _seperator).ToArray<object>());
+        }
 
         private async Task<ParseResults<T>> ParseRowsAsync
             (IEnumerable<DataRow> rows, IProgress<ParserProgress>? progress = null)
@@ -105,13 +110,13 @@ namespace SVFileMapper
             Task<CastResult<T>> ParseRowTask(DataRow row)
             {
                 progress?.Report(new ParserProgress(++count, max));
-                
+
                 CastResult<T> result;
                 try
                 {
                     (T parsedObject, var failedColumns) = ParseRow(row);
                     var columnConversions = failedColumns.ToList();
-                    
+
                     result = columnConversions.Any()
                         ? new CastResult<T>(false, parsedObject, row, columnConversions)
                         : new CastResult<T>(true, parsedObject, row);
@@ -121,7 +126,7 @@ namespace SVFileMapper
                     result = new CastResult<T>(false, Activator.CreateInstance<T>(), row,
                         Array.Empty<FailedColumnConversion>(), ex.Message);
                 }
-                
+
                 return Task.FromResult(result);
             }
 
@@ -141,11 +146,10 @@ namespace SVFileMapper
 
         private (T parsedObject, IEnumerable<FailedColumnConversion> failedColumnConversions) ParseRow(DataRow row)
         {
-            var obj = Activator.CreateInstance<T>();
+            T obj = Activator.CreateInstance<T>();
             var failures = new List<FailedColumnConversion>();
-            
+
             foreach (var (name, property) in Properties)
-            {
                 try
                 {
                     if (!row.Table.Columns.Contains(name))
@@ -174,7 +178,7 @@ namespace SVFileMapper
                     if (property.PropertyType == typeof(DateTime)
                         || property.PropertyType == typeof(DateTime?))
                     {
-                        if (DateTime.TryParse(value, out var parsedDate))
+                        if (DateTime.TryParse(value, out DateTime parsedDate))
                             property.SetValue(obj, parsedDate);
                         continue;
                     }
@@ -184,9 +188,8 @@ namespace SVFileMapper
                         property.SetValue(obj, value.Trim());
                         continue;
                     }
-                    
+
                     property.SetValue(obj, value);
-                
                 }
                 catch (Exception ex)
                 {
@@ -196,7 +199,6 @@ namespace SVFileMapper
                         Reason = ex.Message
                     });
                 }
-            }
 
             return (obj, failures);
         }

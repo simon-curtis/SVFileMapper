@@ -8,11 +8,11 @@ namespace SVFileMapper
     public interface IFileParser<T>
     {
         /// <summary>
-        /// Reads through each line of a seperated value file (such as) provided in the class constructor and converts them to
-        /// the desired object. This will return both an enumerable of parsed rows and an enumerable rows that failed
-        /// to parse so you can check each row for errors.
-        /// <br/><br/>
-        /// ** TSV's are not currently supported
+        ///     Reads through each line of a seperated value file (such as) provided in the class constructor and converts them to
+        ///     the desired object. This will return both an enumerable of parsed rows and an enumerable rows that failed
+        ///     to parse so you can check each row for errors.
+        ///     <br /><br />
+        ///     ** TSV's are not currently supported
         /// </summary>
         /// <param name="filePath">The full file path of the file you want to read.</param>
         /// <param name="progress">Use this if you need to </param>
