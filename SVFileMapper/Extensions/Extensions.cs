@@ -62,8 +62,10 @@ namespace SVFileMapper.Extensions
         public static (IReadOnlyList<TSource> Satisfied, IReadOnlyList<TSource> Falsified) Partition<TSource>(
             this IEnumerable<TSource> source, Func<TSource, bool> predicate)
         {
-            var results = source.ToLookup(predicate.Invoke);
-            return (results[true].ToList(), results[false].ToList());
+            var satisfied = new List<TSource>();
+            var falsified = new List<TSource>();
+            foreach (TSource value in source) (predicate(value) ? satisfied : falsified).Add(value);
+            return (satisfied, falsified);
         }
     }
 }
