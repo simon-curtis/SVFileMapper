@@ -2,6 +2,8 @@
 
 A very simple mapping tool for SV (Separated Values) files such as CSV (comma) or PSV (pipe).
 
+** Please note that this is a personal project and not fit for production use yet.
+
 ## Compatability
 
 This library targets .NET Standard 2.0
@@ -12,13 +14,12 @@ Minimum Runtimes:
 
 ## Getting Started
 
-Add package to project
+Add package to project.
 
 | Agent | Command |
 |:-|:-|
 | Dotnet CLI:            | dotnet add package SVFileMapper|
 | NuGet Package Manager: | Install-Package SVFileMapper |
-
 
 In your program:
 
