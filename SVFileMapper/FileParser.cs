@@ -55,49 +55,55 @@ namespace SVFileMapper
         public async Task<ParseResults<T>> ParseFileAsync
             (string filePath, IProgress<ParserProgress>? progress = null)
         {
-            _logger?.LogCritical("WARNING: You've set a Progress indicator on this class, this will severly slow " +
-                                 "down the code as it forces synchronous behavior");
-
+            if (_logger is not FakeLogger)
+            {
+                _logger.LogCritical("WARNING: You've set a Progress indicator on this class, this will severly slow " +
+                                    "down the code as it forces synchronous behavior");
+            }
+            
             Properties = typeof(T).GetProperties()
                 .Where(p => p.GetCustomAttribute<ColumnIgnored>() == null)
                 .Select(p => (p.GetCustomAttribute<ColumnName>()?.Name ?? p.Name, p))
                 .ToList();
 
-            DataTable? dt = new DataTable();
+            var dt = new DataTable();
 
-            var lines = File.ReadAllLines(filePath);
-            if (lines.Length < 2)
+            using (var reader = new StreamReader(filePath))
+            {
+                var processedHeaders = !_options.HasHeaders;
+                string? line;
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    if (!processedHeaders)
+                    {
+                        var columns = FileParserTools.SplitLine(line, _seperator)
+                            .Select(header => new DataColumn(header))
+                            .ToArray();
+                        
+                        dt.Columns.AddRange(columns);
+                        processedHeaders = true;
+                        continue;
+                    }
+
+                    var dr = await ExtractObjectsAsync(line);
+                    dt.Rows.Add(dr);
+                }
+            } 
+            
+            if (dt.Rows.Count == 0)
             {
                 _logger.LogCritical("No rows in file");
                 return new ParseResults<T>(Array.Empty<T>(), Array.Empty<UnmatchedResult>());
             }
 
-            dt.Columns.AddRange(
-                SplitLine(lines[0], _seperator)
-                    .Select(header => new DataColumn(header))
-                    .ToArray());
-
-            var convertedRows = await Task.WhenAll(lines.Skip(1).Select(ExtractObjectsAsync));
-
-            if (convertedRows.Length == 0)
-            {
-                _logger.LogCritical("No rows converted");
-                return new ParseResults<T>(Array.Empty<T>(), Array.Empty<UnmatchedResult>());
-            }
-
-            foreach (var row in convertedRows)
-                dt.Rows.Add(row);
-
             var (rowsParsed, rowsFailed) = await ParseRowsAsync(dt.Rows.Cast<DataRow>(), progress);
-            var parsed = rowsParsed;
-            var failed = rowsFailed;
-
-            return new ParseResults<T>(parsed, failed);
+            
+            return new ParseResults<T>(rowsParsed, rowsFailed);
         }
 
         private Task<object[]> ExtractObjectsAsync(string line)
         {
-            return Task.Run(() => SplitLine(line, _seperator).ToArray<object>());
+            return Task.Run(() => FileParserTools.SplitLine(line, _seperator).ToArray<object>());
         }
 
         private async Task<ParseResults<T>> ParseRowsAsync
@@ -202,53 +208,49 @@ namespace SVFileMapper
 
             return (obj, failures);
         }
+    }
 
+    public static class FileParserTools
+    {
         public static IEnumerable<string> SplitLine(string line, char seperator)
         {
-            var possibleIndexes = line.Split(seperator).Length;
-            var elements = new string[possibleIndexes];
-            var lastSetIndex = 0;
-            var startReadingFromIndex = 0;
+            Span<char> lineSpan = line.ToArray();
+            var parts = new List<string>();
+
             var insideString = false;
-
-            void AddToElements(string subString)
+            var escapeChar = false;
+            var readFromIndex = 0;
+            for (int i = 0; i < lineSpan.Length; i++)
             {
-                elements[lastSetIndex] = RemoveDoubleQuotes(subString);
-                lastSetIndex++;
-            }
-
-            for (var i = 0; i < line.Length; i++)
-            {
-                if (i + 1 == line.Length)
+                switch (lineSpan[i])
                 {
-                    AddToElements(line.Substring(startReadingFromIndex));
+                    case '\\':
+                        escapeChar = true;
+                        break;
+                    
+                    case '"' when escapeChar == false:
+                        insideString = !insideString;
+                        break;
+                }
+
+                if (lineSpan[i] == seperator && !insideString && !escapeChar)
+                {
+                    parts.Add(lineSpan[readFromIndex..i].ToString());
+                    readFromIndex = i + 1;
+                }
+
+                if (i + 1 == lineSpan.Length)
+                {
+                    parts.Add(lineSpan[readFromIndex..(i + 1)].ToString());
                     break;
                 }
 
-                if (line[i] == '"')
-                {
-                    if (line[i + 1] == '"')
-                    {
-                        i++;
-                        continue;
-                    }
-
-                    insideString = !insideString;
-                }
-                else if (line[i] == seperator && !insideString)
-                {
-                    AddToElements(
-                        line[startReadingFromIndex] == seperator
-                            ? ""
-                            : line.Substring(startReadingFromIndex, i - startReadingFromIndex));
-
-                    startReadingFromIndex = i + 1;
-                }
+                escapeChar = false;
             }
 
-            return elements.Where(e => e != null).ToArray();
+            return parts.Select(RemoveDoubleQuotes);
         }
-
+        
         private static string RemoveDoubleQuotes(string part)
         {
             if (part == "") return part;

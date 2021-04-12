@@ -1,14 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
-using SVFileMapper;
 
-namespace SVFileMapperTests
+namespace SVFileMapper.Tests
 {
-    public class SvfMapperTests
+    public class FileParserToolsTests 
     {
         [Fact]
-        public void SplitString_Comma_Seperation_Test()
+        public void SplitLine_Comma_Seperation_Test()
         {
             var expected = new List<string>
             {
@@ -17,13 +16,13 @@ namespace SVFileMapperTests
             };
             
             const string line = "test,string";
-            var result = FileParser.SplitLine(line, ',');
+            var result = FileParserTools.SplitLine(line, ',');
             
             Assert.Equal(expected, result);
         }
         
         [Fact]
-        public void SplitString_Pipe_Seperation_Test()
+        public void SplitLine_Pipe_Seperation_Test()
         {
             var expected = new List<string>
             {
@@ -32,13 +31,13 @@ namespace SVFileMapperTests
             };
             
             const string line = "test|string";
-            var result = FileParser.SplitLine(line, '|');
+            var result = FileParserTools.SplitLine(line, '|');
             
             Assert.Equal(expected, result);
         }
         
         [Fact]
-        public void SplitString_Tab_Seperation_Test()
+        public void SplitLine_Tab_Seperation_Test()
         {
             var expected = new List<string>
             {
@@ -47,7 +46,7 @@ namespace SVFileMapperTests
             };
             
             const string line = "test	string";
-            var result = FileParser.SplitLine(line, '\t');
+            var result = FileParserTools.SplitLine(line, '\t');
             
             Assert.Equal(expected, result);
         }
@@ -61,7 +60,7 @@ namespace SVFileMapperTests
             };
 
             const string testString = "a simple test to test line splitting";
-            var result = FileParser.SplitLine(testString, ',');
+            var result = FileParserTools.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -75,7 +74,7 @@ namespace SVFileMapperTests
             };
 
             const string testString = "a simple test,to test line splitting";
-            var result = FileParser.SplitLine(testString, ',');
+            var result = FileParserTools.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -89,7 +88,7 @@ namespace SVFileMapperTests
             };
 
             const string testString = "\"a simple test\",to test line splitting";
-            var result = FileParser.SplitLine(testString, ',');
+            var result = FileParserTools.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -105,7 +104,7 @@ namespace SVFileMapperTests
             };
 
             var testString = $"a simple test,\"to test line {seperator} splitting\"";
-            var result = FileParser.SplitLine(testString, ',');
+            var result = FileParserTools.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -119,7 +118,7 @@ namespace SVFileMapperTests
             };
 
             const string testString = "a simple test,\"to test line\"\" splitting\"";
-            var result = FileParser.SplitLine(testString, ',');
+            var result = FileParserTools.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -133,7 +132,7 @@ namespace SVFileMapperTests
             };
 
             const string testString = "a simple test,\"to test line\" splitting\"";
-            var result = FileParser.SplitLine(testString, ',');
+            var result = FileParserTools.SplitLine(testString, ',');
             Assert.Equal(shouldEqual, result);
         }
 
@@ -151,12 +150,12 @@ namespace SVFileMapperTests
                 "Is employee eligible for DSE|AS Site Manager|AS Regional Manager|AS Apprentice|NI Number|Home Postcode|" +
                 "ARC Site Inspection Author|Is Homeworker|Homeworker Home Address Change";
 
-            var attempt = FileParser.SplitLine(line, '|');
+            var attempt = FileParserTools.SplitLine(line, '|');
             Assert.Equal("Homeworker Home Address Change", attempt.Last());
         }
 
         [Fact]
-        public void SplitString_Handles_Empty_Cell()
+        public void SplitLine_Handles_Empty_Cell()
         {
             var expected = new List<string>
             {
@@ -165,9 +164,18 @@ namespace SVFileMapperTests
                 "string"
             };
             const string line = "test,,string";
-            var result = FileParser.SplitLine(line, ',');
+            var result = FileParserTools.SplitLine(line, ',');
             
             Assert.Equal(expected, result);
+        }
+        
+        [Fact]
+        public void SplitLine_Handles_Empty_End()
+        {
+            var parts = FileParserTools.SplitLine(
+                "Penalty,CD40,Causing death through careless driving while unfit through drink,FALSE,TRUE,", ',');
+            
+            Assert.Equal("", parts.Last());
         }
     }
 }

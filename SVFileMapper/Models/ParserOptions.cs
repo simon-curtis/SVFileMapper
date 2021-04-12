@@ -37,5 +37,10 @@ namespace SVFileMapper.Models
         ///     <b>WARNING: Logging severly slows down the code as it forces synchronous behavior</b>
         /// </summary>
         public ILogger? Logger { get; set; }
+
+        /// <summary>
+        /// Specifies if the file you are importing has headers. Default is true.
+        /// </summary>
+        public bool HasHeaders { get; set; } = true;
     }
 }
