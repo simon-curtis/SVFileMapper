@@ -6,7 +6,7 @@ namespace SVFileMapper.Models.DataAnnotations
         AttributeTargets.Field |
         AttributeTargets.Property,
         AllowMultiple = true)]
-    public class ColumnIgnored : Attribute
+    public abstract class ColumnIgnored : Attribute
     {
     }
 }

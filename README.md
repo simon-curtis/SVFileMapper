@@ -6,11 +6,7 @@ A very simple mapping tool for SV (Separated Values) files such as CSV (comma) o
 
 ## Compatability
 
-This library targets .NET Standard 2.0
-
-Minimum Runtimes:
-  - .NET Core 2.0
-  - .NET Framework 4.6.1 (* 4.7.2 recommended for compatability)
+This library targets .NET 6.0, to keep it at the cutting edge of performance
 
 ## Getting Started
 
@@ -31,10 +27,11 @@ namespace YourProgram {
 
   public async static class Program {
   
-    private const string FilePath = @"C:\users\[yourname]\example\file.txt";
+    private const string FilePath = @"~\Example.csv";
   
     public static async Task Main() {
-      var parseResults = await SVFileParser.ParseFileAsync<Employee>(filePath, '|');
+      var parseResults = await new FileParser<Line>()
+          .ParseFileAsync<Employee>(filePath);
       
       foreach (var obj in parseResults.Matched)
           Console.WriteLine(obj.EmployeeId);
@@ -47,7 +44,7 @@ namespace YourProgram {
   
   internal class Employee {
     // You can omit the attribute if column is the same as the name of the property,
-    // this can be handy if the column name has a space in it (as below)
+    // this can be handy if the column name contains a space.
     [CsvColumn("Employee Id")] 
     public string EmployeeId { get; set; }
   }

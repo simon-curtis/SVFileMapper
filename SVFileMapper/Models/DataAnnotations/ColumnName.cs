@@ -6,9 +6,9 @@ namespace SVFileMapper.Models.DataAnnotations
         AttributeTargets.Field |
         AttributeTargets.Property,
         AllowMultiple = true)]
-    public class ColumnName : Attribute
+    public abstract class ColumnName : Attribute
     {
-        public ColumnName(string name)
+        protected ColumnName(string name)
         {
             Name = name;
         }

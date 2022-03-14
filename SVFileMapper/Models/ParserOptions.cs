@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace SVFileMapper.Models
 {
-    public class ParserOptions
+    public readonly struct ParserOptions
     {
         /// <summary>
         ///     The character the lines in the file are seperated by.
@@ -16,7 +16,7 @@ namespace SVFileMapper.Models
         /// <default>
         ///     Separator.Comma
         /// </default>
-        public Separator SeperatingCharacter { get; set; }
+        public Separator SeparatingCharacter { get; init; } = Separator.Comma;
 
         /// <summary>
         ///     If the target type of the property is boolean, it will check this to check
@@ -30,17 +30,17 @@ namespace SVFileMapper.Models
         ///     { "No",  false }<br />
         /// }
         /// </code>
-        public Dictionary<string, bool> AdditionalBooleanValues { get; set; } = new();
+        public Dictionary<string, bool> AdditionalBooleanValues { get; init; } = new();
 
         /// <summary>
         ///     Use this to attach a logger to output any commentry from the parsing process.<br />
         ///     <b>WARNING: Logging severly slows down the code as it forces synchronous behavior</b>
         /// </summary>
-        public ILogger? Logger { get; set; }
+        public ILogger? Logger { get; init; } = null;
 
         /// <summary>
         /// Specifies if the file you are importing has headers. Default is true.
         /// </summary>
-        public bool HasHeaders { get; set; } = true;
+        public bool HasHeaders { get; init; } = true;
     }
 }

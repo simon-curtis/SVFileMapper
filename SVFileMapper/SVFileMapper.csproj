@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
         <Title>Seperated Value File Mapper</Title>
         <Authors>Simon Curtis</Authors>
         <PackageProjectUrl>https://github.com/simon-curtis/SVFileMapper</PackageProjectUrl>
@@ -9,6 +9,10 @@
         <PackageVersion>2.0.1</PackageVersion>
         <LangVersion>latestmajor</LangVersion>
         <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DebugType>full</DebugType>
     </PropertyGroup>
 
     <ItemGroup>
