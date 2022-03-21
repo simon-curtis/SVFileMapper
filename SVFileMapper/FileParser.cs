@@ -254,7 +254,7 @@ namespace SVFileMapper
             if (part is { Length: 0 }) return string.Empty;
             if (part[0] == '"') part = part[1..];
             if (part[^1] == '"') part = part[..^1];
-            return part.ToString().Replace("\"\"", "\"");
+            return part.ToString().Replace("\"\"", "\"").TrimEnd();
         }
     }
 }
